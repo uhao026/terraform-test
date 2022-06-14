@@ -37,4 +37,23 @@ resource "alicloud_instance" "instance" {
   internet_max_bandwidth_out =10
   password = "Admin@1234"
 }
+terraform {
+  required_providers {
+    ansible = {
+      source = "nbering/ansible"
+      version = "1.0.4"
+    }
+  }
+}
+provider "ansible" {}
 
+resource "ansible_host" "salt-proxy" {
+
+  inventory_hostname  = alicloud_instance.instance.public_ip
+  groups = ["salt-proxy"]
+
+  vars = {
+    wait_connection_timeout   = 60
+    proxy_private_ip          = alicloud_instance.instance.private_ip
+  }
+}
