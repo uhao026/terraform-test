@@ -38,6 +38,16 @@ resource "alicloud_instance" "instance" {
   password = "Admin@1234"
 }
 
+terraform {
+  required_providers {
+    ansible = {
+      source = "nbering/ansible"
+      version = "1.0.4"
+    }
+  }
+}
+provider "ansible" {}
+
 resource "ansible_host" "salt-proxy" {
   count = 1
 
