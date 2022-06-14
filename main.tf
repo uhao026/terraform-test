@@ -36,6 +36,7 @@ resource "alicloud_instance" "instance" {
   vswitch_id = alicloud_vswitch.vsw.id
   internet_max_bandwidth_out =10
   password = "Admin@1234"
+  key_name = "terraform"
 }
 terraform {
   required_providers {
