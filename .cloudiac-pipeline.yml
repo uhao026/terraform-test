@@ -1,0 +1,59 @@
+# pipeline 格式版本号，为了保证多版本的兼容性
+version: 0.4
+
+# plan 任务
+plan:
+  # 任务步骤列表
+  steps:
+    - type: checkout        # 步骤类型
+      name: Checkout Code   # 步骤的展示名称，未提供名称则展示为步骤类型
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+    - type: envScan
+      name: OPA Scan
+
+apply:
+  steps:
+    - type: checkout
+      name: Checkout Code
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+
+    - type: envScan
+      name: OPA Scan
+
+    - type: terraformApply
+      name: Terraform Apply
+
+    - type: command
+      name: sleep
+      args:
+        - sleep 5
+
+    - type: ansiblePlay
+      name: Run playbook
+
+destroy:
+  steps:
+    - type: checkout
+      name: Checkout Code
+
+    - type: terraformInit
+      name: Terraform Init
+
+    - type: terraformPlan
+      name: Terraform Plan
+      args:
+        - "-destroy"
+
+    - type: terraformDestroy
+      name: Terraform Destroy
