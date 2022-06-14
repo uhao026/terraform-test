@@ -1,0 +1,47 @@
+- hosts: all
+  remote_user: root
+  # gather_facts: True
+  tasks:
+    # - name: 下发公钥到新主机
+    #   authorized_key: user=root key="{{ lookup('file', '/root/.ssh/id_rsa.pub') }}"
+
+    # - name: 检查系统版本
+    #   fail: msg="系统版本错误，请检查"
+    #   when: ansible_facts['distribution'] != "CentOS" or ansible_facts['distribution_major_version'] != "7"
+
+    # - name: 检查是否挂载/data目录
+    #   fail: msg="/data目录未挂载，请检查"
+    #   when: not ansible_mounts[1].mount == "/data"
+
+    # - name: 检查/data目录是否挂载异常
+    #   fail: msg="/data目录小于250G，请检查"
+    #   when: ansible_mounts[1].size_total | int < 250000000000
+
+    - name: 拷贝初始化脚本
+      template: src={{ item }} dest=/tmp/{{ item }} owner=root group=root
+      with_items:
+        - install_lnmp.sh
+
+    # - name: 检查是否安装过LNMP
+    #   shell: if [ -f /tmp/install.log ];then grep 'Install Complete' /tmp/install.log;fi || echo None
+    #   register: result
+
+    - name: 开始安装LNMP
+      shell: /bin/sh /tmp/install_lnmp.sh > /tmp/install.log 2>&1
+      # when: "'Install Complete' not in result.stdout"
+
+    # - name: 检查是否安装按成
+    #   shell: if [ -f /tmp/install.log ];then grep 'Install Complete' /tmp/install.log;fi || echo None
+    #   register: result
+    # - fail: msg="安装失败，请登录到安装机器查看/tmp/install.log查看原因"
+    #   when: "'Install Complete' not in result.stdout"
+
+    - name: 检查LNMP安装状态
+      shell: ps aux | egrep "(php|nginx|mysql)"
+      register: result
+    - fail: msg="{{ item }}安装异常，请检查"
+      when: "item not in result.stdout"
+      with_items:
+        - php
+        - mysql
+        - nginx
