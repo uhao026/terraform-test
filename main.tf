@@ -37,3 +37,17 @@ resource "alicloud_instance" "instance" {
   internet_max_bandwidth_out =10
   password = "Admin@1234"
 }
+
+resource "ansible_host" "salt-proxy" {
+  count = 1
+
+  inventory_hostname  = alicloud_instance.ecsone[count.index].public_ip
+
+  groups = ["salt-proxy"]
+
+  vars = {
+    wait_connection_timeout   = 60
+    proxy_private_ip          = alicloud_instance.ecsone[count.index].private_ip
+    proxy_docker_tag          = var.proxy_docker_tag
+  }
+}
