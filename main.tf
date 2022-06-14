@@ -38,26 +38,3 @@ resource "alicloud_instance" "instance" {
   password = "Admin@1234"
 }
 
-terraform {
-  required_providers {
-    ansible = {
-      source = "nbering/ansible"
-      version = "1.0.4"
-    }
-  }
-}
-provider "ansible" {}
-
-resource "ansible_host" "salt-proxy" {
-  count = 1
-
-  inventory_hostname  = alicloud_instance.ecsone[count.index].public_ip
-
-  groups = ["salt-proxy"]
-
-  vars = {
-    wait_connection_timeout   = 60
-    proxy_private_ip          = alicloud_instance.ecsone[count.index].private_ip
-    proxy_docker_tag          = var.proxy_docker_tag
-  }
-}
