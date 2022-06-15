@@ -22,44 +22,19 @@ if [ $EUID -ne 0 ]; then
 fi
 
 # 检查操作系统版本
-if egrep "CentOS release 6" /etc/redhat-release > /dev/null 2>&1; then
-    OS=CentOS6
-elif egrep "CentOS Linux release 7" /etc/redhat-release > /dev/null 2>&1; then
+if egrep "CentOS Linux release 7" /etc/redhat-release > /dev/null 2>&1; then
     OS=CentOS7
 else
-    err_echo "This script is used for CentOS 6.x or 7.x only."
+    err_echo "This script is used for CentOS 7.x only."
 fi
 
 # 检查网络
-ping -c 1 mirrors.163.com &>/dev/null
+ping -c 1 mirrors.aliyun.com &>/dev/null
 [ $? != 0 ] && err_echo "Network does not work."
 
 which wget &>/dev/null || yum install wget -y
 
-# CentOS6安装yum的axel插件，使yum支持多线程下载：
-if [ "$OS" == "CentOS6" ];then
-    wget https://mirrors.tuna.tsinghua.edu.cn/repoforge/redhat/el6/en/x86_64/rpmforge/RPMS/axel-2.4-1.el6.rf.x86_64.rpm
-    rpm -ivh axel-2.4-1.el6.rf.x86_64.rpm
-
-    axelget_conf_start=$(grep -n 'axelget.conf start_line' "$0" | grep -v grep | awk -F: '{print $1}')
-    axelget_conf_end=$(grep -n 'axelget.conf end_line' "$0" | grep -v grep | awk -F: '{print $1}')
-    ((axelget_conf_start++))
-    ((axelget_conf_end--))
-    sed -n "${axelget_conf_start},${axelget_conf_end}p" "$0" > /etc/yum/pluginconf.d/axelget.conf
-
-    axelget_py_start=$(grep -n 'axelget.py start_line' "$0" | grep -v grep | awk -F: '{print $1}')
-    axelget_py_end=$(grep -n 'axelget.py end_line' "$0" | grep -v grep | awk -F: '{print $1}')
-    ((axelget_py_start++))
-    ((axelget_py_end--))
-    sed -n "${axelget_py_start},${axelget_py_end}p" "$0" > /usr/lib/yum-plugins/axelget.py
-fi
-
-# 安装163 yum源：
-if [ "$OS" == "CentOS6" ];then
-    wget http://mirrors.163.com/.help/CentOS6-Base-163.repo -O CentOS-Base.repo
-else
-    wget http://mirrors.163.com/.help/CentOS7-Base-163.repo -O CentOS-Base.repo
-fi
+wget http://mirrors.aliyun.com/repo/Centos-7.repo -O CentOS-Base.repo
 cp -p /etc/yum.repos.d/CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo.bak
 mv -f CentOS-Base.repo /etc/yum.repos.d/CentOS-Base.repo
 yum clean all
@@ -69,10 +44,8 @@ yum makecache
 yum -y install epel-release
 sed -i 's/^mirrorlist=https/mirrorlist=http/' /etc/yum.repos.d/epel.repo
 # CentOS7安装yum的axel插件，依赖epel源
-if [ "$OS" == "CentOS7" ];then
-    yum -y install yum-axelget
-    sed -i '/^maxconn=/c\maxconn=10' /etc/yum/pluginconf.d/axelget.conf
-fi
+yum -y install yum-axelget
+sed -i '/^maxconn=/c\maxconn=10' /etc/yum/pluginconf.d/axelget.conf
 
 # nginx的yum源：
 cat > /etc/yum.repos.d/nginx.repo << 'EOF'
@@ -85,7 +58,7 @@ EOF
 
 # 关闭selinux：
 setenforce 0
-sed -i '/^SELINUX=/c\SELINUX=disabled' /etc/selinux/config
+sed -i '/^SELINUX=/c\SELINUX=disabled' /etc/selinux/config 
 
 # 安装nginx、php：
 yum -y install nginx php-fpm php-soap php-bcmath php-xml php-opcache php-gd php-mcrypt php-pdo php-mysql php-mbstring php-xmlrpc
@@ -146,7 +119,7 @@ http {
     log_format  access   '$remote_addr - $remote_user [$time_local] "$request"  '
      '$status $body_bytes_sent "$http_referer"  '
      '"$http_user_agent" $http_x_forwarded_for ';
-    access_log /data/logs/access.log access;
+    access_log /data/logs/access.log access;    
 
     include conf.d/*.conf;
 
@@ -174,21 +147,14 @@ nginx -t && service nginx start
 [ $? -eq 0 ] && info_echo "nginx start OK."
 
 # 设置nginx、php-fpm开机启动：
-if [ "$OS" == "CentOS6" ];then
-    chkconfig php-fpm on
-    chkconfig nginx on
-else
-    systemctl enable php-fpm
-    systemctl enable nginx
-fi
+systemctl enable php-fpm
+systemctl enable nginx
+
 
 # 安装Mysql的yum源：
-if [ "$OS" == "CentOS6" ];then
-    rpm -Uvh http://dev.mysql.com/get/mysql-community-release-el6-5.noarch.rpm
-else
-    rpm -Uvh http://repo.mysql.com/mysql57-community-release-el7-10.noarch.rpm
-    rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
-fi
+
+rpm -Uvh http://repo.mysql.com/mysql57-community-release-el7-10.noarch.rpm
+rpm --import https://repo.mysql.com/RPM-GPG-KEY-mysql-2022
 
 # 安装mysql：
 yum -y install mysql mysql-server mysql-devel
@@ -198,8 +164,8 @@ cat > /etc/my.cnf << 'EOF'
 # Example MySQL config file. mysql5.6 RAM 1G zhangbin
 
 [client]
-port		= 3306
-socket		= /var/lib/mysql/mysql.sock
+port  = 3306
+socket  = /var/lib/mysql/mysql.sock
 
 [mysqld]
 user = mysql
@@ -293,10 +259,6 @@ service mysqld start
 #mysql_secure_installation
 
 # 设置mysqld开机启动：
-if [ "$OS" == "CentOS6" ];then
-    chkconfig mysqld on
-else
-    systemctl enable mysqld
-fi
+systemctl enable mysqld
 
 exit 0
